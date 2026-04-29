@@ -40,9 +40,8 @@ services:
           property: connectionString
 
   # Frontend Static Site
-  - type: web
+  - type: static_site
     name: playto-frontend
-    env: static
     buildCommand: cd frontend && npm install && npm run build
     publishPath: frontend/dist
     envVars:
