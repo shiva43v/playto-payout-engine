@@ -47,11 +47,7 @@ services:
     staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: playto-backend
-          property: url
-        suffix: /api/v1
+        value: https://playto-backend.onrender.com/api/v1
 
   # Redis Service
   - type: redis
