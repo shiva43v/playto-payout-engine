@@ -60,13 +60,4 @@ def transition_payout(payout, new_status):
 ```
 Because `'FAILED'` has an empty list of valid next states, attempting `transition_payout(payout, 'COMPLETED')` on a failed payout will throw an `InvalidTransition` exception.
 
-## 5. The AI Audit
 
-**What AI wrote subtly wrong initially:**
-1. AI initially suggested using `try/except IntegrityError` with `IdempotencyKey.objects.create()` inside the `@transaction.atomic` block in `request_payout`.
-2. AI didn't import `Case` and `When` correctly.
-3. AI tried to serialize a UUID directly into a `JSONField` without a proper encoder.
-
-**What I caught & replaced:**
-Catching `IntegrityError` from a unique constraint violation *breaks* the surrounding Django database transaction (PostgreSQL aborts the transaction). You can't run any more queries (like `get()` or returning data) in that block, leading to `TransactionManagementError`. I replaced it with `IdempotencyKey.objects.get_or_create()`, which uses an internal savepoint (sub-transaction) explicitly to handle the race condition safely without aborting the outer `atomic` block. 
-I also added `DjangoJSONEncoder` to the `JSONField` to handle UUID serialization properly.
