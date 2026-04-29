@@ -46,3 +46,8 @@ cd backend
 python manage.py test payouts
 ```
 *(Note: Concurrency test expects PostgreSQL to pass successfully since SQLite locks the whole DB file, resulting in an `OperationalError` instead of `InsufficientFunds` exception).*
+
+<img width="1920" height="904" alt="Screenshot 2026-04-29 092906" src="https://github.com/user-attachments/assets/ee393889-f316-43f9-b5bf-3624793d3c22" />
+
+<img width="1920" height="913" alt="Screenshot 2026-04-29 092956" src="https://github.com/user-attachments/assets/0c72ff13-8c83-45db-9989-4e80365c8a45" />
+
