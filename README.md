@@ -12,8 +12,9 @@ This is a production-grade implementation of a Payout Engine for Playto Pay, han
 4. `source venv/bin/activate` (or `.\venv\Scripts\activate` on Windows)
 5. `pip install -r requirements.txt`
 6. `python manage.py migrate`
-7. `python seed.py` (Creates 3 merchants with initial balance)
-8. `python manage.py runserver`
+7. `python seed.py` (Creates 3 merchants with initial balance id : 11111111-1111-1111-1111-111111111111)
+8. 
+9. `python manage.py runserver`
 
 In a new terminal window, start Celery:
 ```bash
