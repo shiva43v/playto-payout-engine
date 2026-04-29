@@ -22,50 +22,64 @@ def process_payout(self, payout_id):
         return
 
     # Simulate bank settlement network
-    # 70% success, 20% fail, 10% hang
-    outcome = random.choices(['success', 'fail', 'hang'], weights=[70, 20, 10])[0]
+    # 80% success, 20% fail
+    outcome = random.choices(['success', 'fail'], weights=[80, 20])[0]
 
     payout.attempts += 1
     payout.last_attempt_at = timezone.now()
     payout.save(update_fields=['attempts', 'last_attempt_at'])
 
-    if outcome == 'hang':
-        # We simulate a hang by just doing nothing and letting it stay in PROCESSING.
-        # The retry beat task will pick it up later.
-        time.sleep(2) # Small sleep to simulate work before hang
-        return "Hung"
-
     time.sleep(1) # Simulate network delay
 
-    if outcome == 'success':
-        with transaction.atomic():
-            # Refresh from db and lock it
-            payout = Payout.objects.select_for_update().get(id=payout.id)
-            if payout.status != 'PROCESSING':
-                return "Already processed"
-            transition_payout(payout, 'COMPLETED')
-        return "Completed"
+    try:
+        if outcome == 'success':
+            with transaction.atomic():
+                # Refresh from db and lock it
+                payout = Payout.objects.select_for_update().get(id=payout.id)
+                if payout.status != 'PROCESSING':
+                    return "Already processed"
+                transition_payout(payout, 'COMPLETED')
+            return "Completed"
 
-    elif outcome == 'fail':
-        # Return funds atomically with state transition
+        elif outcome == 'fail':
+            # Return funds atomically with state transition
+            with transaction.atomic():
+                payout = Payout.objects.select_for_update().get(id=payout.id)
+                if payout.status != 'PROCESSING':
+                    return "Already processed"
+                
+                payout.failure_reason = "Simulated bank rejection"
+                transition_payout(payout, 'FAILED')
+                payout.save(update_fields=['failure_reason'])
+
+                # Credit back the merchant
+                LedgerEntry.objects.create(
+                    merchant=payout.merchant,
+                    entry_type='CREDIT',
+                    amount_paise=payout.amount_paise,
+                    reference=str(payout.id),
+                    description="Refund for failed payout"
+                )
+            return "Failed and refunded"
+    except Exception as e:
+        # If any unexpected error occurs (e.g., DB connection drop on free tier),
+        # ensure we don't leave the payout stuck in PROCESSING.
         with transaction.atomic():
             payout = Payout.objects.select_for_update().get(id=payout.id)
-            if payout.status != 'PROCESSING':
-                return "Already processed"
-            
-            payout.failure_reason = "Simulated bank rejection"
-            transition_payout(payout, 'FAILED')
-            payout.save(update_fields=['failure_reason'])
+            if payout.status == 'PROCESSING':
+                payout.failure_reason = f"Internal system error: {str(e)}"
+                transition_payout(payout, 'FAILED')
+                payout.save(update_fields=['failure_reason'])
+                # Credit back the merchant
+                LedgerEntry.objects.create(
+                    merchant=payout.merchant,
+                    entry_type='CREDIT',
+                    amount_paise=payout.amount_paise,
+                    reference=str(payout.id),
+                    description="Refund due to internal error"
+                )
+        return "Failed due to exception"
 
-            # Credit back the merchant
-            LedgerEntry.objects.create(
-                merchant=payout.merchant,
-                entry_type='CREDIT',
-                amount_paise=payout.amount_paise,
-                reference=str(payout.id),
-                description="Refund for failed payout"
-            )
-        return "Failed and refunded"
 
 @shared_task
 def retry_stuck_payouts():
