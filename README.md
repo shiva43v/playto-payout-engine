@@ -24,7 +24,7 @@ celery -A config worker -l info -P solo
 celery -A config beat -l info
 ```
 
-*(Note: In the submission, settings.py is configured to use SQLite locally due to Docker environment limitations, but uses `dj_database_url` for PostgreSQL in production. The exact code uses DB aggregate functions and `SELECT FOR UPDATE` designed specifically for PostgreSQL).*
+
 
 ### Frontend (React + Vite + Tailwind)
 
@@ -45,7 +45,7 @@ Run tests to verify concurrency and idempotency:
 cd backend
 python manage.py test payouts
 ```
-*(Note: Concurrency test expects PostgreSQL to pass successfully since SQLite locks the whole DB file, resulting in an `OperationalError` instead of `InsufficientFunds` exception).*
+
 
 <img width="1920" height="904" alt="Screenshot 2026-04-29 092906" src="https://github.com/user-attachments/assets/ee393889-f316-43f9-b5bf-3624793d3c22" />
 
